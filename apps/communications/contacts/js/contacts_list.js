@@ -19,7 +19,10 @@ contacts.List = (function() {
       headers = {},
       contactsCache = {},
       searchLoaded = false,
-      imagesLoaded = false;
+      imagesLoaded = false,
+      globalContacts = [];
+
+  var CHUNK_SIZE = 20;
 
   // Key on the async Storage
   var ORDER_KEY = 'order.lastname';
@@ -330,7 +333,6 @@ contacts.List = (function() {
 
     var counter = {};
     var length = contacts.length;
-    var CHUNK_SIZE = 20;
 
     counter['favorites'] = 0;
     var showNoContacs = length === 0;
@@ -391,6 +393,63 @@ contacts.List = (function() {
     }
 
     renderChunks(0);
+  };
+
+  /**
+   * Build contacts CHUNK_SIZE * index through CHUNK_SIZE * (index + 1)
+   * @param {number} index is where we should start looking for contacts
+   *                 in an array that we share with the caller.
+   * @param {boolean} lastChunk whether or not this is the last batch of
+   *                  contacts to render.
+   */
+  var buildContactsWithCursor = function (index, lastChunk) {
+    var counter = {
+      'favorites': 0  // TODO(gareth): What is this?
+    };
+    var contactsCache = {};
+    var favorites = [];
+
+    toggleNoContactsScreen(contacts.length === 0);
+
+    // Adds each contact to its group container
+    function appendToList(contact, renderedContact) {
+      var group = getGroupName(contact);
+
+      var list = headers[group];
+      counter[group] = counter[group] + 1 || 1;
+      list.appendChild(renderedContact);
+
+      if (counter[group] === 1) {
+        // template + new record
+        showGroup(group, group == 'A');   // TODO(gareth): === ?
+      }
+    }
+
+    /**
+     * Inject a chunk of contacts into the DOM.
+     * @param {number} index where to begin in the globalContacts array.
+     * @param {number} size number of contacts to append.
+     */
+    function appendChunk(index, size) {
+      for (var i = 0; i < size; i++) {
+        var current = (index * CHUNK_SIZE) + i;
+        var contact = globalContacts[current];
+        appendToList(contact, renderContact(contact));
+      }
+    }
+
+    if (!lastChunk) {
+      appendChunk(index, CHUNK_SIZE);
+      return;
+    }
+
+    // We're rendering the last batch of contacts
+    var remaining = globalContacts.length % CHUNK_SIZE;
+    appendChunk(index, remaining);
+    // TODO(gareth): Why?
+    window.setTimeout(onListRendered, 0);
+    dispatchCustomEvent('listRendered');
+    globalContacts = [];  // TODO(gareth): Is this just to release memory?
   };
 
   // Methods executed after rendering the list
@@ -662,17 +721,36 @@ contacts.List = (function() {
 
   var getAllContacts = function cl_getAllContacts(errorCb, successCb) {
     initOrder(function onInitOrder() {
+      // Global array we'll populate with contacts
+      globalContacts = [];
+
       var sortBy = (orderByLastName === true ? 'familyName' : 'givenName');
       var options = {
         sortBy: sortBy,
         sortOrder: 'ascending'
       };
 
-      var request = navigator.mozContacts.find(options);
-      request.onsuccess = function findCallback() {
-        successCb(request.result);
+      var cursor = navigator.mozContacts.getAll(options);
+      cursor.onsuccess = function(evt) {
+        var contact = evt.target.result;
+        if (contact) {
+          globalContacts.push(contact);
+          cursor.continue();
+        }
+
+        // Inject a chunk of contacts into the DOM if
+        // 1. we didn't get a contact or
+        // 2. we've gotten CHUNK_SIZE since we issued the last request.
+        var lastChunk = (contact == null);
+        if (lastChunk || globalContacts.length % CHUNK_SIZE === 0) {
+          setTimeout((function() {
+            buildContactsWithCursor(
+                (globalContacts.length / CHUNK_SIZE) - 1, lastChunk);
+          })(), 0);
+        }
       };
 
+      cursor.onerror = errorCb;
       request.onerror = errorCb;
     });
   };
