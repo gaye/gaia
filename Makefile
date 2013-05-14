@@ -593,6 +593,13 @@ endif
 test-agent-server: common-install
 	$(TEST_AGENT_DIR)/node_modules/test-agent/bin/js-test-agent server --port $(TEST_AGENT_PORT) -c ./$(TEST_AGENT_DIR)/test-agent-server.js --http-path . --growl
 
+.PHONY: nukecomm
+nukecomm:
+	rm -rf apps/communications
+
+.PHONY: travis-test-agent-server
+travis-test-agent-server: nukecomm test-agent-server
+
 .PHONY: marionette
 marionette:
 #need the profile

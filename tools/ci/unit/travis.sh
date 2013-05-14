@@ -63,7 +63,7 @@ LINT_RESULT_STATUS=$?
 echo
 
 section_echo 'make test-agent-test'
-make test-agent-test REPORTER=Min
+make travis-test-agent-test REPORTER=Min
 TEST_RESULT_STATUS=$?
 echo
 
