@@ -48,11 +48,11 @@ echo 'Downloading xulrunner-sdk and making profile for testing (more than 5 minu
 DEBUG=1 WGET_OPTS=-nv make &> /dev/null
 
 echo "Starting test-agent-server and waiting for server to start on port ${TEST_AGENT_PORT}"
-make test-agent-server &> /dev/null &
+make test-agent-server > travis-log-test-agent-server &
 waiting_port $TEST_AGENT_PORT
 
 echo 'Starting Firefox'
-firefox/firefox -profile `pwd`/profile-debug "$TESTAGENT_URL" &> /dev/null &
+firefox/firefox -profile `pwd`/profile-debug -no-remote "$TESTAGENT_URL" > travis-log-firefox &
 waiting_port 8080
 sleep 5
 
