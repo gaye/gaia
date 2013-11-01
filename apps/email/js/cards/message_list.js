@@ -8,6 +8,7 @@ var templateNode = require('tmpl!./message_list.html'),
     largeMsgConfirmMsgNode = require('tmpl!./msg/large_message_confirm.html'),
     common = require('mail_common'),
     model = require('model'),
+    headerCursor = require('header_cursor').cursor,
     htmlCache = require('html_cache'),
     MessageListTopbar = require('message_list_topbar'),
     mozL10n = require('l10n!'),
@@ -216,6 +217,9 @@ function MessageListCard(domNode, mode, args) {
 
   this._boundOnNewMail = this.onNewMail.bind(this);
   model.on('newInboxMessages', this._boundOnNewMail);
+
+  this.onCurrentMessage = this.onCurrentMessage.bind(this);
+  headerCursor.on('currentMessage', this.onCurrentMessage);
 }
 MessageListCard.prototype = {
   /**
@@ -1205,6 +1209,8 @@ MessageListCard.prototype = {
         });
     }
 
+    headerCursor.setCurrentMessage(header);
+
     // If the message is really big, warn them before they open it.
     // Ideally we'd only warn if you're on a cell connection
     // (metered), but as of now `navigator.connection.metered` isn't
@@ -1231,6 +1237,24 @@ MessageListCard.prototype = {
     } else {
       pushMessageCard();
     }
+  },
+
+  /**
+   * Scroll to make sure that the current message is in our visible window.
+   *
+   * @param {MessageCursor.CurrentMessage} currentMessage representation of the
+   *     email we're currently reading.
+   */
+  onCurrentMessage: function(currentMessage) {
+    if (!currentMessage) {
+      return;
+    }
+
+    var id = currentMessage.header.id;
+    var selector = '.msg-messages-container ' +
+                   '.msg-header-item[data-id="' + id + '"]';
+    var element = document.querySelector(selector);
+    this.scrollContainer.scrollTop = element.offsetTop;
   },
 
   onHoldMessage: function(messageNode, event) {
@@ -1367,8 +1391,10 @@ MessageListCard.prototype = {
     }
     model.removeListener('folder', this._boundFolderChanged);
     model.removeListener('newInboxMessages', this._boundOnNewMail);
+    headerCursor.removeListener('currentMessage', this.onCurrentMessage);
   }
 };
+
 Cards.defineCard({
   name: 'message_list',
   modes: {

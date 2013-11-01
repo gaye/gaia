@@ -13,6 +13,7 @@ var MimeMapper,
                          require('tmpl!./msg/attachment_disabled_confirm.html'),
     common = require('mail_common'),
     model = require('model'),
+    headerCursor = require('header_cursor').cursor,
     evt = require('evt'),
     iframeShims = require('iframe_shims'),
     Marquee = require('marquee'),
@@ -110,6 +111,8 @@ function MessageReaderCard(domNode, mode, args) {
   this.htmlBodyNodes = [];
 
   this._on('msg-back-btn', 'click', 'onBack', true);
+  this._on('msg-up-btn', 'click', 'onPrevious');
+  this._on('msg-down-btn', 'click', 'onNext');
   this._on('msg-reply-btn', 'click', 'onReplyMenu');
   this._on('msg-delete-btn', 'click', 'onDelete');
   this._on('msg-star-btn', 'click', 'onToggleStar');
@@ -127,6 +130,11 @@ function MessageReaderCard(domNode, mode, args) {
 
   // whether or not we've built the body DOM the first time
   this._builtBodyDom = false;
+
+  this.onCurrentMessage = this.onCurrentMessage.bind(this);
+  headerCursor.latest('currentMessage', this.onCurrentMessage);
+  // This should handle the case where we jump right into the reader.
+  headerCursor.setCurrentMessage(this.header);
 }
 MessageReaderCard.prototype = {
   _contextMenuType: {
@@ -192,6 +200,52 @@ MessageReaderCard.prototype = {
 
   onBack: function(event) {
     Cards.removeCardAndSuccessors(this.domNode, 'animate');
+  },
+
+  /**
+   * Broadcast that we need to move previous if there's a previous sibling.
+   *
+   * @param {Event} event previous arrow click event.
+   */
+  onPrevious: function(event) {
+    headerCursor.advance('previous');
+  },
+
+  /**
+   * Broadcast that we need to move next if there's a next sibling.
+   *
+   * @param {Event} event next arrow click event.
+   */
+  onNext: function(event) {
+    headerCursor.advance('next');
+  },
+
+  /**
+   * Set the message we're reading.
+   *
+   * @param {MessageCursor.CurrentMessage} currentMessage representation of the
+   *     email we're currently reading.
+   */
+  onCurrentMessage: function(currentMessage) {
+    // Set our current message.
+    this.messageSuid = currentMessage.header.id;
+    this._setHeader(currentMessage.header);
+    this.clearDom(this.domNode);
+    this.postInsert();
+
+    // Previous.
+    var hasPrevious = currentMessage.siblings.hasPrevious;
+    var previousBtn = this.domNode.getElementsByClassName('msg-up-btn')[0];
+    previousBtn.disabled = !hasPrevious;
+    var previousIcon = this.domNode.getElementsByClassName('icon-up')[0];
+    previousIcon.classList[hasPrevious ? 'remove' : 'add']('icon-disabled');
+
+    // Next.
+    var hasNext = currentMessage.siblings.hasNext;
+    var nextBtn = this.domNode.getElementsByClassName('msg-down-btn')[0];
+    nextBtn.disabled = !hasNext;
+    var nextIcon = this.domNode.getElementsByClassName('icon-down')[0];
+    nextIcon.classList[hasNext ? 'remove' : 'add']('icon-disabled');
   },
 
   reply: function() {
@@ -692,6 +746,27 @@ MessageReaderCard.prototype = {
 
     displaySubject(domNode.getElementsByClassName('msg-envelope-subject')[0],
                    header);
+  },
+
+  clearDom: function(domNode) {
+    if (!domNode) {
+      // Nothing to do!
+      return;
+    }
+
+    // Clear header emails.
+    var types = ['from', 'to', 'cc', 'bcc'];
+    types.forEach(function(type) {
+      var lineClass = 'msg-envelope-' + type + '-line';
+      var lineNode = domNode.getElementsByClassName(lineClass)[0];
+      lineNode.classList.add('collapsed');
+      lineNode.innerHTML = '';
+    });
+
+    // Nuke rendered attachments.
+    var attachmentsContainer =
+      domNode.getElementsByClassName('msg-attachments-container')[0];
+    attachmentsContainer.innerHTML = '';
   },
 
   /**
