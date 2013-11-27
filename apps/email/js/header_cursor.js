@@ -1,3 +1,4 @@
+/*global define */
 /**
  * @fileoverview Bug 918303 - HeaderCursor added to provide MessageListCard and
  *     MessageReaderCard the current message and whether there are adjacent
@@ -8,12 +9,31 @@ define(function(require) {
       evt = require('evt'),
       model = require('model');
 
+  function makeListener(type, obj) {
+    return function() {
+      var args = Array.slice(arguments);
+      this.emit.apply(this, ['messages_' + type].concat(args));
+    }.bind(obj);
+  }
+
   /**
    * @constructor
    */
   function HeaderCursor() {
     // Inherit from evt.Emitter.
     evt.Emitter.call(this);
+
+    // Listen for some slice events to do some special work.
+    this.on('messages_splice', this.onMessagesSplice.bind(this));
+    this.on('messages_remove', this.onMessagesSpliceRemove.bind(this));
+    this.on('messages_complete', function() {
+      // Consumers, like message_list, always want their 'complete' work
+      // to fire, but by default the slice removes the complete handler
+      // at the end. So rebind on each call here.
+      if (this.messagesSlice) {
+        this.messagesSlice.oncomplete = makeListener('complete', this);
+      }
+    }.bind(this));
 
     // Listen to model for folder changes.
     this.onLatestFolder = this.onLatestFolder.bind(this);
@@ -30,6 +50,16 @@ define(function(require) {
      * @type {HeadersViewSlice}
      */
     messagesSlice: null,
+
+    /**
+     * @type {String}
+     */
+    expectingMessageSuid: null,
+
+    /**
+     * @type {Array}
+     */
+    sliceEvents: ['splice', 'change', 'status', 'remove', 'complete'],
 
     /**
      * The messageReader told us it wanted to advance, so we should go ahead
@@ -58,16 +88,63 @@ define(function(require) {
     },
 
     /**
+     * Tracks a messageSuid to use in selecting
+     * the currentMessage once the slice data loads.
+     * @param {String} messageSuid The message suid.
+     */
+    setCurrentMessageBySuid: function(messageSuid) {
+      this.expectingMessageSuid = messageSuid;
+      this.checkExpectingMessageSuid();
+    },
+
+    /**
+     * Sets the currentMessage if there are messages now to check
+     * against expectingMessageSuid. Only works if current folder
+     * is set to an "inbox" type, so only useful for jumps into
+     * the email app from an entry point like a notification.
+     * @param  {Boolean} eventIfNotFound if set to true, an event
+     * is emitted if the messageSuid is not found in the set of
+     * messages.
+     */
+    checkExpectingMessageSuid: function(eventIfNotFound) {
+      var messageSuid = this.expectingMessageSuid;
+      if (!messageSuid || !model.folder || model.folder.type !== 'inbox') {
+        return;
+      }
+
+      var index = this.indexOfMessageById(messageSuid);
+      if (index > -1) {
+        this.expectingMessageSuid = null;
+        return this.setCurrentMessageByIndex(index);
+      }
+
+      if (eventIfNotFound) {
+        console.error('header_cursor could not find messageSuid ' +
+                      messageSuid + ', emitting messageSuidNotFound');
+        this.emit('messageSuidNotFound', messageSuid);
+      }
+    },
+
+    /**
      * @param {MailHeader} header message header.
-     * @private
      */
     setCurrentMessage: function(header) {
       if (!header) {
         return;
       }
 
-      var index = this.indexOfMessageById(header.id);
+      this.setCurrentMessageByIndex(this.indexOfMessageById(header.id));
+    },
+
+    setCurrentMessageByIndex: function(index) {
       var messages = this.messagesSlice.items;
+
+      // Do not bother if not a valid index.
+      if (index === -1 || index > messages.length - 1) {
+        return;
+      }
+
+      var header = messages[index];
       var currentMessage = new CurrentMessage(header, {
         hasPrevious: index !== 0,                 // Can't be first
         hasNext: index !== messages.length - 1    // Can't be last
@@ -83,7 +160,7 @@ define(function(require) {
      *     in the message slice it has checked out.
      */
     indexOfMessageById: function(id) {
-      var messages = this.messagesSlice.items;
+      var messages = (this.messagesSlice && this.messagesSlice.items) || [];
       return array.indexOfGeneric(messages, function(message) {
         return message.id === id;
       });
@@ -102,10 +179,54 @@ define(function(require) {
         return;
       }
 
+      this.freshMessagesSlice();
+    },
+
+    startSearch: function(phrase, whatToSearch) {
+      this.bindToSlice(model.api.searchFolderMessages(model.folder,
+                                                      phrase,
+                                                      whatToSearch));
+    },
+
+    endSearch: function() {
+      this.die();
+      this.freshMessagesSlice();
+    },
+
+    freshMessagesSlice: function() {
+      this.bindToSlice(model.api.viewFolderMessages(model.folder));
+    },
+
+    /**
+     * holds on to messagesSlice and binds some events to it.
+     * @param  {Slice} messagesSlice the new messagesSlice.
+     */
+    bindToSlice: function(messagesSlice) {
       this.die();
 
-      this.messagesSlice = model.api.viewFolderMessages(folder);
-      this.messagesSlice.onremove = this.onMessagesSpliceRemove.bind(this);
+      this.messagesSlice = messagesSlice;
+
+      this.sliceEvents.forEach(function(type) {
+        messagesSlice['on' + type] = makeListener(type, this);
+      }.bind(this));
+    },
+
+    onMessagesSplice: function(index, howMany, addedItems,
+                                         requested, moreExpected) {
+      // Avoid doing work if get called while in the process of
+      // shutting down.
+      if (!this.messagesSlice) {
+        return;
+      }
+
+      // If there was a messageSuid expected and at the top, then
+      // check to see if it was received. This is really just nice
+      // for when a new message notification comes in, as the atTop
+      // test is a bit fuzzy generally. Not all slices go to the top.
+      if (this.messagesSlice.atTop && this.expectingMessageSuid &&
+          this.messagesSlice.items && this.messagesSlice.items.length) {
+        this.checkExpectingMessageSuid(true);
+      }
     },
 
     /**
@@ -151,7 +272,7 @@ define(function(require) {
   function CurrentMessage(header, siblings) {
     this.header = header;
     this.siblings = siblings;
-  };
+  }
 
   CurrentMessage.prototype = {
     /**

@@ -56,56 +56,6 @@ function MessageReaderCard(domNode, mode, args) {
   this.domNode = domNode;
   this.messageSuid = args.messageSuid;
 
-  if (args.header) {
-    this._setHeader(args.header);
-  } else {
-    // This assumes latest folder is the one of interest.
-    model.latestOnce('folder', function(folder) {
-      var messagesSlice = model.api.viewFolderMessages(folder);
-
-      function clear() {
-        messagesSlice.die();
-        messagesSlice = null;
-      }
-
-      messagesSlice.onsplice = (function(index, howMany, addedItems,
-                                         requested, moreExpected) {
-
-        // Avoid doing work if get called while in the process of
-        // shutting down.
-        if (!messagesSlice)
-          return;
-
-        if (!this.header && addedItems && addedItems.length) {
-          addedItems.some(function(item) {
-              if (item.id === this.messageSuid) {
-                this._setHeader(item);
-                clear();
-                return true;
-              }
-          }.bind(this));
-
-          // If at the top, and no message was found, then if the UI
-          // wants to go back on missing message, do that now. This
-          // card may have been created from obsolete data, like an
-          // old notification for a message that no longer exists.
-          // This stops atTop since the most likely case for this
-          // entry point is either clicking on a message that is
-          // at the top of the inbox in the HTML cache, or from a
-          // notification for a new message, which would be near
-          // the top.
-          if (messagesSlice && messagesSlice.atTop &&
-              !this.header &&
-              args.backOnMissingMessage) {
-            clear();
-            this.onBack();
-          }
-        }
-
-      }).bind(this);
-    }.bind(this));
-  }
-
   // The body elements for the (potentially multiple) iframes we created to hold
   // HTML email content.
   this.htmlBodyNodes = [];
@@ -125,14 +75,17 @@ function MessageReaderCard(domNode, mode, args) {
   this.scrollContainer =
     domNode.getElementsByClassName('scrollregion-below-header')[0];
 
-  // event handler for body change events...
-  this.handleBodyChange = this.handleBodyChange.bind(this);
-
   // whether or not we've built the body DOM the first time
   this._builtBodyDom = false;
 
+  // Bind some methods to this so they can be used as event listeners
+  this.handleBodyChange = this.handleBodyChange.bind(this);
+  this.onMessageSuidNotFound = this.onMessageSuidNotFound.bind(this);
   this.onCurrentMessage = this.onCurrentMessage.bind(this);
+
+  headerCursor.on('messageSuidNotFound', this.onMessageSuidNotFound);
   headerCursor.latest('currentMessage', this.onCurrentMessage);
+
   // This should handle the case where we jump right into the reader.
   headerCursor.setCurrentMessage(this.header);
 }
@@ -194,6 +147,12 @@ MessageReaderCard.prototype = {
     }.bind(this));
   },
 
+  told: function(args) {
+    if (args.messageSuid) {
+      this.messageSuid = args.messageSuid;
+    }
+  },
+
   handleBodyChange: function(evt) {
     this.buildBodyDom(evt.changeDetails);
   },
@@ -220,6 +179,20 @@ MessageReaderCard.prototype = {
     headerCursor.advance('next');
   },
 
+  onMessageSuidNotFound: function(messageSuid) {
+    // If no message was found, then go back. This card
+    // may have been created from obsolete data, like an
+    // old notification for a message that no longer exists.
+    // This stops atTop since the most likely case for this
+    // entry point is either clicking on a message that is
+    // at the top of the inbox in the HTML cache, or from a
+    // notification for a new message, which would be near
+    // the top.
+    if (this.messageSuid === messageSuid) {
+      this.onBack();
+    }
+  },
+
   /**
    * Set the message we're reading.
    *
@@ -228,7 +201,7 @@ MessageReaderCard.prototype = {
    */
   onCurrentMessage: function(currentMessage) {
     // Set our current message.
-    this.messageSuid = currentMessage.header.id;
+    this.messageSuid = null;
     this._setHeader(currentMessage.header);
     this.clearDom(this.domNode);
     this.postInsert();
@@ -960,6 +933,10 @@ MessageReaderCard.prototype = {
   },
 
   die: function() {
+    headerCursor.removeListener('messageSuidNotFound',
+                                this.onMessageSuidNotFound);
+    headerCursor.removeListener('currentMessage', this.onCurrentMessage);
+
     // Our header was makeCopy()d from the message-list and so needs to be
     // explicitly removed since it is not part of a slice.
     if (this.header) {
