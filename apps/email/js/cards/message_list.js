@@ -703,7 +703,7 @@ MessageListCard.prototype = {
     }
 
     if (postScreens < SCROLL_MIN_BUFFER_SCREENS &&
-        !this.messagesSlice.atBottom) {
+        !headerCursor.messagesSlice.atBottom) {
       headerCursor.messagesSlice.requestGrowth(this._getGrowth(postScreens));
     }
     else if (postScreens > SCROLL_MAX_RETENTION_SCREENS) {
@@ -766,7 +766,7 @@ MessageListCard.prototype = {
   // the distance between items. It is expected to remain fairly constant
   // throughout the list so we only need to calculate it once.
   _getDistance: function() {
-    var items = this.messagesSlice.items;
+    var items = headerCursor.messagesSlice.items;
     if (!this._distanceBetweenMessages && items.length > 1) {
       this._distanceBetweenMessages =
         items[1].element.getBoundingClientRect().top -
@@ -1269,9 +1269,19 @@ MessageListCard.prototype = {
     // Element may not be there if current message is fired
     // before the notification of a folder change happens,
     // which could be the case when entering from a notification.
-    if (element) {
-      this.scrollContainer.scrollTop = element.offsetTop;
+    if (!element) {
+      return;
     }
+
+    // Check whether or not the current message is in the visible window.
+    var top = this.scrollContainer.scrollTop;
+    var bottom = this.scrollContainer.scrollTop +
+                 this.scrollContainer.getBoundingClientRect().bottom;
+    if (element.offsetTop >= top && element.offsetTop <= bottom) {
+      return;
+    }
+
+    this.scrollContainer.scrollTop = element.offsetTop;
   },
 
   onHoldMessage: function(messageNode, event) {

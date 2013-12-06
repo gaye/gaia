@@ -2,7 +2,8 @@
 /**
  * @fileoverview Bug 918303 - HeaderCursor added to provide MessageListCard and
  *     MessageReaderCard the current message and whether there are adjacent
- *     messages that can be advanced to.
+ *     messages that can be advanced to. Expect for [other] consumers to add
+ *     additional data to messagesSlice items after they've left the MailAPI.
  */
 define(function(require) {
   var array = require('array'),
@@ -84,7 +85,7 @@ define(function(require) {
         return;
       }
 
-      this.setCurrentMessage(messages[index]);
+      this.setCurrentMessageByIndex(index);
     },
 
     /**
@@ -145,6 +146,10 @@ define(function(require) {
       }
 
       var header = messages[index];
+      if ('header' in header) {
+        header = header.header;
+      }
+
       var currentMessage = new CurrentMessage(header, {
         hasPrevious: index !== 0,                 // Can't be first
         hasNext: index !== messages.length - 1    // Can't be last
@@ -162,7 +167,8 @@ define(function(require) {
     indexOfMessageById: function(id) {
       var messages = (this.messagesSlice && this.messagesSlice.items) || [];
       return array.indexOfGeneric(messages, function(message) {
-        return message.id === id;
+        var other = 'header' in message ? message.header.id : message.id;
+        return other === id;
       });
     },
 
@@ -205,7 +211,6 @@ define(function(require) {
       this.die();
 
       this.messagesSlice = messagesSlice;
-
       this.sliceEvents.forEach(function(type) {
         messagesSlice['on' + type] = makeListener(type, this);
       }.bind(this));

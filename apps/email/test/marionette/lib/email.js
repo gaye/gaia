@@ -61,7 +61,8 @@ var Selector = {
   // is clickable and does the job.
   notifyEmailCheckbox: '.tng-notify-mail-label',
   accountSettingsBackButton: '.card-settings-account .tng-back-btn',
-  localDraftsItem: '.fld-folders-container a[data-type=localdrafts]'
+  localDraftsItem: '.fld-folders-container a[data-type=localdrafts]',
+  toaster: 'section[role="status"]'
 };
 
 Email.prototype = {
@@ -82,6 +83,11 @@ Email.prototype = {
     this.tapRefreshButton();
     this.waitForNewEmail();
     this.tapNotificationBar();
+  },
+
+  waitForToaster: function() {
+    var toaster = this.client.helper.waitForElement(Selector.toaster);
+    this.client.helper.waitForElementToDisappear(toaster);
   },
 
   get notificationBar() {

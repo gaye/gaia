@@ -59,6 +59,10 @@ function use(options, mochaContext) {
     this.timeout('20s');
     server.create(function(err, control) {
       controlServer = control;
+      state.kill = function(callback) {
+        controlServer.cleanupStacks(callback);
+      };
+
       done(err);
     });
   });
