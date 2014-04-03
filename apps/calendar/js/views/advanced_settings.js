@@ -99,11 +99,13 @@
       switch (type) {
         case 'alldayAlarmDefault':
         case 'standardAlarmDefault':
-        case 'syncFrequency':
           if (value !== null) {
             value = parseInt(value);
           }
           store.set(type, value);
+          break;
+        case 'syncFrequency':
+          store.set('syncFrequency', 1);
           break;
       }
     },
