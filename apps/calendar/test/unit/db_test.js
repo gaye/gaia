@@ -2,7 +2,7 @@
 
 requireLib('calendar.js');
 requireLib('db.js');
-requireLib('ext/uuid.js');
+requireBower('node-uuid/uuid.js');
 requireLib('models/account.js');
 requireLib('models/calendar.js');
 requireLib('models/event.js');

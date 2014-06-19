@@ -2,9 +2,9 @@
 
 requireApp('calendar/test/unit/service/helper.js');
 requireLib('presets.js');
-requireLib('ext/ical.js');
-requireLib('ext/caldav.js');
-requireLib('ext/uuid.js');
+requireBower('ical/ical.js');
+requireBower('caldav/caldav.js');
+requireBower('node-uuid/uuid.js');
 requireLib('service/ical_recur_expansion.js');
 requireLib('service/caldav.js');
 
