@@ -1636,6 +1636,8 @@ suite('service/caldav', function() {
 
         subject.updateEvent(account, calendar, eventDetails,
                             function(err, result) {
+                              console.log(JSON.stringify(err));
+                              console.log(err.toString());
 
           subject.parseEvent(result.icalComponent,
                              function(parseErr, newEvent) {

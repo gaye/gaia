@@ -8,10 +8,10 @@ Calendar.Db = (function() {
  */
 /*var Account = Calendar.Models.Account;*/
 /*var Presets = Calendar.Presets;*/
-/*var Provider = Calendar.Provider;*/
 var Responder = Calendar.Responder;
 /*var Store = Calendar.Store;*/
 var debug = Calendar.debug('Db');
+var local = Calendar.Provider.local;
 var nextTick = Calendar.nextTick;
 var probablyParseInt = Calendar.probablyParseInt;
 
@@ -439,9 +439,9 @@ Db.prototype = {
     account._id = uuid();
 
     var calendar = {
-      _id: Calendar.Provider.Local.calendarId,
+      _id: local.calendarId,
       accountId: account._id,
-      remote: Calendar.Provider.Local.defaultCalendar()
+      remote: local.localCalendar()
     };
 
     accountStore.persist(account, trans);

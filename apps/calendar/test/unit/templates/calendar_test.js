@@ -1,6 +1,3 @@
-requireLib('provider/abstract.js');
-requireLib('provider/local.js');
-
 suiteGroup('Templates.Calendar', function() {
   'use strict';
 
@@ -17,7 +14,7 @@ suiteGroup('Templates.Calendar', function() {
   test('#item with local id', function() {
     var model = {
       localDisplayed: true,
-      _id: Calendar.Provider.Local.calendarId,
+      _id: 'local-first',
       name: 'foo'
     };
 

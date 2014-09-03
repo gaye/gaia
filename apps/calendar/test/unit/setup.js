@@ -1,6 +1,5 @@
 /*global Factory */
-
-(function(window) {
+(function() {
   'use strict';
 
   var oldRequire = window.require;
@@ -340,6 +339,7 @@ window.mochaPromise = function(mochaFn, description, callback) {
     });
   });
 
+  /* shared */
   requireApp('calendar/shared/js/l10n_date.js');
   requireApp('calendar/shared/js/lazy_loader.js');
 
@@ -350,6 +350,8 @@ window.mochaPromise = function(mochaFn, description, callback) {
   requireLib('compare.js');
   requireLib('calc.js');
   requireLib('date_l10n.js');
+  requireLib('event_mutations.js');
+  requireLib('ext/eventemitter2.js');
   requireLib('extend.js');
   requireLib('next_tick.js');
   requireLib('object.js');
@@ -363,10 +365,18 @@ window.mochaPromise = function(mochaFn, description, callback) {
   requireApp('calendar/test/unit/loader.js');
   requireLib('responder.js');
   requireLib('load_config.js');
+  requireLib('utils/mout.js');
   requireLib('view.js');
   requireLib('router.js');
   requireLib('interval_tree.js');
   requireLib('time_observer.js');
+  requireLib('day_observer.js');
+
+  requireLib('provider/local.js');
+  requireLib('provider/worker.js');
+  requireLib('provider/provider.js');
+
+  /* store */
   requireLib('store/abstract.js');
   requireLib('store/alarm.js');
   requireLib('store/busytime.js');
@@ -375,24 +385,19 @@ window.mochaPromise = function(mochaFn, description, callback) {
   requireLib('store/event.js');
   requireLib('store/setting.js');
   requireLib('store/ical_component.js');
-  requireLib('provider/abstract.js');
-  requireLib('provider/local.js');
-  requireSupport('mock_provider.js');
+
+  /* controllers */
   requireLib('worker/manager.js');
   requireLib('controllers/service.js');
   requireLib('controllers/error.js');
   requireLib('controllers/time.js');
   requireLib('controllers/sync.js');
   requireLib('controllers/alarm.js');
-  requireLib('store/setting.js');
+
   requireLib('db.js');
-  requireLib('ext/eventemitter2.js');
-  requireLib('utils/mout.js');
-  requireLib('day_observer.js');
   requireLib('app.js');
 
   /* test helpers */
-
   requireSupport('fake_page.js');
   requireSupport('factory.js');
   requireSupport('factories/all.js');
@@ -401,4 +406,4 @@ window.mochaPromise = function(mochaFn, description, callback) {
   window.uuid = null;
   window.NotAmd = null;
 
-}(this));
+}());

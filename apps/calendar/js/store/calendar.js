@@ -1,8 +1,14 @@
 (function(window) {
   'use strict';
 
+  /**
+   * Module dependencies
+   */
+  var Abstract = Calendar.Store.Abstract;
+  var local = Calendar.Provider.local;
+
   function Store() {
-    Calendar.Store.Abstract.apply(this, arguments);
+    Abstract.apply(this, arguments);
     this._usedColors = [];
 
     Calendar.Promise.denodeifyAll(this, [
@@ -42,7 +48,7 @@
   };
 
   Store.prototype = {
-    __proto__: Calendar.Store.Abstract.prototype,
+    __proto__: Abstract.prototype,
 
     _store: 'calendars',
 
@@ -118,14 +124,12 @@
         }.bind(this);
       }
 
-      Calendar.Store.Abstract.prototype.persist.call(
-        this, calendar, trans, cb
-      );
+      Abstract.prototype.persist.call(this, calendar, trans, cb);
     },
 
     remove: function(id, trans, callback) {
       this._removeCalendarColorFromCache(id);
-      Calendar.Store.Abstract.prototype.remove.apply(this, arguments);
+      Abstract.prototype.remove.apply(this, arguments);
     },
 
     _updateCalendarColor: function(calendar) {
@@ -155,7 +159,7 @@
 
     _setCalendarColor: function(calendar) {
       // local calendar should always use the same color
-      if (calendar._id === Calendar.Provider.Local.calendarId) {
+      if (calendar._id === local.calendarId) {
         calendar.color = Store.LOCAL_COLOR;
         return;
       }
