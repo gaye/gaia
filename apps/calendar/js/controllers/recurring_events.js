@@ -2,14 +2,14 @@ define(function(require, exports, module) {
 'use strict';
 
 var Responder = require('responder');
-var debug = require('debug')('expand events');
-var nextTick = require('next_tick');
-var providerFactory = require('provider/provider_factory');
+var debug = require('debug')('controllers/recurring_events');
+var provider = require('provider/provider');
+var retry = require('retry');
 
 function RecurringEvents(app) {
+  Responder.call(this);
   this.app = app;
   this.accounts = app.store('Account');
-  Responder.call(this);
 }
 module.exports = RecurringEvents;
 
@@ -26,8 +26,6 @@ RecurringEvents.prototype = {
    * in the month view (or a view with more days) otherwise
    * the view may be loaded without actually expanding all
    * the visible days.
-   *
-   * @type Number
    */
   paddingInDays: 85,
 
@@ -54,18 +52,6 @@ RecurringEvents.prototype = {
    */
   pending: false,
 
-  unobserve: function() {
-    this.app.timeController.removeEventListener(
-      'monthChange',
-      this
-    );
-
-    this.app.syncController.removeEventListener(
-      'syncComplete',
-      this
-    );
-  },
-
   observe: function() {
     var time = this.app.timeController;
 
@@ -83,14 +69,17 @@ RecurringEvents.prototype = {
     this.app.syncController.on('syncComplete', this);
   },
 
+  unobserve: function() {
+    var app = this.app;
+    app.timeController.removeEventListener('monthChange', this);
+    app.syncController.removeEventListener('syncComplete', this);
+  },
+
   handleEvent: function(event) {
     switch (event.type) {
       case 'syncComplete':
-        this.queueExpand(
-          this.app.timeController.position
-        );
+        this.queueExpand(this.app.timeController.position);
         break;
-
       case 'monthChange':
         if (this._moveTimeout !== null) {
           clearTimeout(this._moveTimeout);
@@ -108,58 +97,15 @@ RecurringEvents.prototype = {
   },
 
   /**
-   * Attempts to expand provider until no events require expansion.
-   *
-   * @param {Date} expandDate expands up to this date.
-   * @param {Calendar.Provider.Abstract} provider instance.
-   * @param {Function} callback
-   *  fired when maximumExpansions is hit or
-   *  no more events require expansion.
-   *
-   */
-  _expandProvider: function(expandDate, provider, callback) {
-    var tries = 0;
-    var max = this.maximumExpansions;
-
-    function attemptCompleteExpand() {
-      if (tries >= max) {
-        return callback(new Error(
-          'could not complete expansion after "' + tries + '"'
-        ));
-      }
-
-      provider.ensureRecurrencesExpanded(expandDate,
-                                         function(err, didExpand) {
-        if (err) {
-          return callback(err);
-        }
-
-        if (!didExpand) {
-          // successfully expanded and no events need expansion
-          // for this date anymore...
-          callback();
-        } else {
-          tries++;
-          // attempt another expand without stack.
-          nextTick(attemptCompleteExpand);
-        }
-      });
-    }
-
-    attemptCompleteExpand();
-  },
-
-  /**
    * Queues an expansion. If the given date is before
    * any dates in the stack it will be discarded.
    */
   queueExpand: function(expandTo) {
     if (this.pending) {
-      if (!this._next) {
-        this._next = expandTo;
-      } else if (expandTo > this._next) {
+      if (!this._next || expandTo > this._next) {
         this._next = expandTo;
       }
+
       // don't start the queue if pending...
       return;
     }
@@ -199,41 +145,25 @@ RecurringEvents.prototype = {
    * @param {Date} expandTo date to expand to.
    */
   expand: function(expandTo, callback) {
-    debug('expand', expandTo);
-    // we need to look through all available accounts
-    var pending = 0;
+    debug('expand to date: ', expandTo);
 
-    function next() {
-      if (!(--pending)) {
-        callback();
-      }
-    }
+    // add minimum padding...
+    var expandDate = new Date(expandTo.valueOf());
+    expandDate.setDate(expandDate.getDate() + this.paddingInDays);
 
-    this.accounts.all(function(err, list) {
-      if (err) {
-        return callback(err);
-      }
-
-      // add minimum padding...
-      var expandDate = new Date(expandTo.valueOf());
-      expandDate.setDate(expandDate.getDate() + this.paddingInDays);
-
-      for (var key in list) {
-        pending++;
-        var provider = providerFactory.get(list[key].providerType);
-        if (provider && provider.canExpandRecurringEvents) {
-          this._expandProvider(expandDate, provider, next);
-        } else {
-          nextTick(next);
-        }
+    retry(
+      () => provider.ensureRecurrencesExpanded(expandDate),
+      this.maximumExpansions
+    )
+    .then(callback)
+    .catch((error) => {
+      if (error.name === 'RetryError') {
+        error = new Error('Failed to expand recurrences after ' +
+                          this.maximumExpansions + ' attempts.');
       }
 
-      // if there are no accounts we need to fire the callback.
-      if (!pending) {
-        nextTick(callback);
-      }
-
-    }.bind(this));
+      callback(error);
+    });
   }
 };
 

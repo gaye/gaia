@@ -4,10 +4,10 @@ define(function(require, exports, module) {
 
 var Account = require('models/account');
 var Presets = require('presets');
-var Local = require('provider/local');
 var Responder = require('responder');
 var Store = require('store/store');
 var debug = require('debug')('db');
+var local = require('provider/local');
 var nextTick = require('next_tick');
 var probablyParseInt = require('probably_parse_int');
 var uuid = require('ext/uuid');
@@ -437,9 +437,9 @@ Db.prototype = {
     account._id = uuid();
 
     var calendar = {
-      _id: Local.calendarId,
+      _id: local.calendarId,
       accountId: account._id,
-      remote: Local.defaultCalendar()
+      remote: local.localCalendar()
     };
 
     accountStore.persist(account, trans);

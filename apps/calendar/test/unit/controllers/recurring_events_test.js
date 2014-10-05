@@ -5,7 +5,7 @@ var Factory = require('test/support/factory');
 var RecurringEvents = require('controllers/recurring_events');
 var Responder = require('responder');
 var nextTick = require('next_tick');
-var providerFactory = require('provider/provider_factory');
+var provider = require('provider/provider');
 
 suite('Controllers.RecurringEvents', function() {
   var subject;
@@ -189,7 +189,6 @@ suite('Controllers.RecurringEvents', function() {
 
   suite('#expand', function() {
     var account;
-    var provider;
     var expandDate = new Date(2012, 1, 1);
     var expectedDate;
 
@@ -200,12 +199,7 @@ suite('Controllers.RecurringEvents', function() {
 
     function setupProvider(type) {
       setup(function(done) {
-        account = Factory('account', {
-          providerType: type,
-          _id: type
-        });
-
-        provider = providerFactory.get(type);
+        account = Factory('account', { _id: type });
         app.store('Account').persist(account, done);
       });
     }

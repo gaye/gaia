@@ -1,5 +1,11 @@
 'use strict';
 
+// This is here so that the unit tests still load
+// requirejs (since we aren't doing the rjs optimizer)
+if (typeof(require) === 'undefined') {
+  importScripts('./ext/alameda.js');
+}
+
 require.config({
   baseUrl: '/js',
   paths: {

@@ -18,7 +18,7 @@ var debug = require('debug')('app');
 var nextTick = require('next_tick');
 var page = require('ext/page');
 var performance = require('performance');
-var providerFactory = require('provider/provider_factory');
+var provider = require('provider/provider');
 var snakeCase = require('snake_case');
 
 var pendingClass = 'pending-operation';
@@ -44,7 +44,7 @@ module.exports = {
     this.router = router;
     this.router.app = this;
 
-    providerFactory.app = this;
+    provider.app = this;
 
     this._views = Object.create(null);
     this._routeViewFn = Object.create(null);
@@ -365,13 +365,6 @@ module.exports = {
    */
   store: function(name) {
     return this.db.getStore(name);
-  },
-
-  /**
-   * Returns the offline status.
-   */
-  offline: function() {
-    return (navigator && 'onLine' in navigator) ? !navigator.onLine : true;
   }
 };
 

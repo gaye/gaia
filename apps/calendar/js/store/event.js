@@ -5,7 +5,7 @@ var Abstract = require('./abstract');
 var Calc = require('calc');
 var Calendar = require('./calendar');
 var denodeifyAll = require('promise').denodeifyAll;
-var providerFactory = require('provider/provider_factory');
+var provider = require('provider/provider');
 
 function Events() {
   Abstract.apply(this, arguments);
@@ -66,7 +66,7 @@ Events.prototype = {
    */
   providerFor: function(event, callback) {
     this.ownersOf(event, function(err, owners) {
-      callback(null, providerFactory.get(owners.account.providerType));
+      callback(null, provider);
     });
   },
 

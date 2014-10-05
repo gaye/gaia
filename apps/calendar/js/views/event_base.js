@@ -4,7 +4,7 @@ define(function(require, exports, module) {
 var Event = require('models/event');
 var View = require('view');
 var nextTick = require('next_tick');
-var providerFactory = require('provider/provider_factory');
+var provider = require('provider/provider');
 
 function EventBase(options) {
   View.apply(this, arguments);
@@ -136,8 +136,7 @@ EventBase.prototype = {
 
     function fetchOwners(err, owners) {
       self.originalCalendar = owners.calendar;
-      self.provider = providerFactory.get(owners.account.providerType);
-      self.provider.eventCapabilities(
+      provider.eventCapabilities(
         self.event,
         fetchEventCaps
       );

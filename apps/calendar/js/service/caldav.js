@@ -31,6 +31,7 @@ function Service(service) {
 module.exports = Service;
 
 Service.prototype = {
+
   __proto__: Responder.prototype,
 
   /**
@@ -57,14 +58,12 @@ Service.prototype = {
       'createEvent'
     ];
 
-    debug('Will listen for worker events...');
     events.forEach(function(e) {
       this.service.on(e, this);
     }, this);
   },
 
   handleEvent: function(e) {
-    debug('Worker will fulfill', e.type, 'request...');
     this[e.type].apply(this, e.data);
   },
 
@@ -83,10 +82,14 @@ Service.prototype = {
       switch (preset.authenticationType) {
         case 'oauth2':
           params.httpHandler = 'oauth2';
+
           // shallow copy the apiCredentials on the preset
           params.apiCredentials = extend({}, preset.apiCredentials);
+
           // the url in this case will always be tokenUrl
-          params.apiCredentials.url = preset.apiCredentials.tokenUrl;
+          params.apiCredentials.url =
+            preset.apiCredentials.tokenUrl;
+
           break;
       }
     }
@@ -151,20 +154,15 @@ Service.prototype = {
 
   getAccount: function(account, callback) {
     var url = account.entrypoint;
-    debug('Fetching account from:', url);
-
     var connection = this._createConnection(account);
-    debug('Creating connection:', connection);
 
     var request = this._requestHome(connection, url);
-    debug('Will issue calendar home request.');
     return request.send(function(err, data) {
       if (err) {
-        debug('Error sending home request:', err);
-        return callback(err);
+        callback(err);
+        return;
       }
 
-      debug('Received data:', data);
       var result = {};
 
       if (data.url) {
@@ -538,7 +536,7 @@ Service.prototype = {
    *    ]
    *
    * @param {Array[icalComponent]} components list of icalComponents.
-   * @param {Calendar.Responder} stream to emit events.
+   * @param {Responder} stream to emit events.
    * @param {Object} options list of options.
    * @param {Object} options.maxDate maximum date to expand to.
    * @param {Function} callback only sends an error if fatal.
@@ -705,7 +703,7 @@ Service.prototype = {
    *
    * @param {String} url location of event.
    * @param {Object} response caldav response object.
-   * @param {Calendar.Responder} responder event emitter.
+   * @param {Responder} responder event emitter.
    * @param {Function} callback node style callback fired after event parsing.
    */
   _handleCaldavEvent: function(url, response, stream, callback) {
@@ -781,7 +779,7 @@ Service.prototype = {
         try {
           stream.emit('error', err);
         } catch (e) {
-          console.error('Failed to transport err:', err.toString(), err.stack);
+          console.log('failed to transport err:', err.toString(), err.stack);
         }
       }
 
@@ -793,7 +791,7 @@ Service.prototype = {
     function handleResponse(url, data) {
       if (!data || !data['calendar-data']) {
         // throw some error;
-        console.error('Could not sync: ', url);
+        console.log('Could not sync: ', url);
         return;
       }
       var etag = data.getetag.value;
@@ -846,14 +844,19 @@ Service.prototype = {
     return new Caldav.Request.Asset(connection, url);
   },
 
-  deleteEvent: function(account, calendar, event, callback) {
+  deleteEvent: function(account, calendar, event, options, callback) {
+    if (typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+
+    if ('sync' in options && !options.sync) {
+      return callback(null);
+    }
+
     var connection = this._createConnection(account);
-
     var req = this._assetRequest(connection, event.url);
-
-    req.delete({}, function(err) {
-      callback(err);
-    });
+    req.delete({}, callback);
   },
 
   addAlarms: function(component, alarms, account) {
@@ -921,8 +924,12 @@ Service.prototype = {
     return account && account.domain === 'https://caldav.calendar.yahoo.com';
   },
 
-  createEvent: function(account, calendar, event, callback) {
-    var connection = this._createConnection(account);
+  createEvent: function(account, calendar, event, options, callback) {
+    if (typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+
     var vcalendar = new ICAL.Component('vcalendar');
     var icalEvent = new ICAL.Event();
 
@@ -931,7 +938,7 @@ Service.prototype = {
     vcalendar.addPropertyWithValue('version', this.icalVersion);
 
     // text fields
-    icalEvent.uid = uuid();
+    icalEvent.uid = event.id || uuid();
     icalEvent.summary = event.title;
     icalEvent.description = event.description;
     icalEvent.location = event.location;
@@ -941,18 +948,35 @@ Service.prototype = {
     icalEvent.startDate = this.formatInputTime(event.start);
     icalEvent.endDate = this.formatInputTime(event.end);
 
+    if ('freq' in event && event.freq !== 'never') {
+      var rrule = ['FREQ=' + event.freq.toUpperCase()];
+      if ('until' in event) {
+        rrule.push('UNTIL=' + this.formatInputTime(event.until));
+      } else if ('count' in event) {
+        rrule.push('COUNT=' + event.count);
+      }
+
+      var value = rrule.join(';');
+      debug('Serialized RRULE: ', value);
+      icalEvent._setProp('rrule', rrule.join(';'));
+    }
+
     // alarms
     this.addAlarms(icalEvent.component, event.alarms, account);
 
     vcalendar.addSubcomponent(icalEvent.component);
 
-    var url = calendar.url + icalEvent.uid + '.ics';
-    var req = this._assetRequest(connection, url);
-
     event.id = icalEvent.uid;
-    event.url = url;
     event.icalComponent = vcalendar.toString();
 
+    if ('sync' in options && !options.sync) {
+      return callback(null, event);
+    }
+
+    var url = calendar.url + icalEvent.uid + '.ics';
+    event.url = url;
+    var connection = this._createConnection(account);
+    var req = this._assetRequest(connection, url);
     req.put({}, event.icalComponent, function(err, data, xhr) {
       if (err) {
         callback(err);
@@ -964,7 +988,6 @@ Service.prototype = {
       // TODO: error handling
       callback(err, event);
     });
-
   },
 
   /**
@@ -976,14 +999,16 @@ Service.prototype = {
    * @param {Object} eventDetails details to update the event.
    *  unmodified parsed ical component. (VCALENDAR).
    */
-  updateEvent: function(account, calendar, eventDetails, callback) {
-    var connection = this._createConnection(account);
+  updateEvent: function(account, calendar, eventDetails, options, callback) {
+    if (typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
 
     var icalComponent = eventDetails.icalComponent;
     var event = eventDetails.event;
 
     var self = this;
-    var req = this._assetRequest(connection, event.url);
 
     // parse event
     this.parseEvent(icalComponent, function(err, icalEvent) {
@@ -1047,6 +1072,12 @@ Service.prototype = {
       var vcal = target.component.parent.toString();
       event.icalComponent = vcal;
 
+      if ('sync' in options && !options.sync) {
+        return callback(null, event);
+      }
+
+      var connection = this._createConnection(account);
+      var req = this._assetRequest(connection, event.url);
       req.put({}, vcal, function(err, data, xhr) {
         if (err) {
           callback(err);
@@ -1060,6 +1091,7 @@ Service.prototype = {
       });
     });
   }
+
 };
 
 });

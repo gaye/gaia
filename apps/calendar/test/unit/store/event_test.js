@@ -6,7 +6,6 @@ var AccountModel = require('models/account');
 var Calc = require('calc');
 var CalendarModel = require('models/calendar');
 var Factory = require('test/support/factory');
-var providerFactory = require('provider/provider_factory');
 
 suite('store/event', function() {
   var subject;
@@ -96,17 +95,6 @@ suite('store/event', function() {
         });
       });
     });
-
-    test('#providerFor', function(done) {
-      subject.providerFor(event, function(err, provider) {
-        assert.equal(
-          provider,
-          providerFactory.get('Mock')
-        );
-        done();
-      });
-    });
-
   });
 
   suite('#eventsForCalendar', function() {

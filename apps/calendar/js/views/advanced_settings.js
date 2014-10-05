@@ -3,7 +3,6 @@ define(function(require, exports, module) {
 
 var AlarmTemplate = require('templates/alarm');
 var View = require('view');
-var providerFactory = require('provider/provider_factory');
 var template = require('templates/account');
 
 require('dom!advanced-settings-view');
@@ -73,8 +72,8 @@ AdvancedSettings.prototype = {
   },
 
   _displayAccount: function(account) {
-    var provider = providerFactory.get(account.providerType);
-    return provider.hasAccountSettings;
+    // TODO(gareth)
+    return true;
   },
 
   _initEvents: function() {

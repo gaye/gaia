@@ -67,11 +67,9 @@ function loadApp() {
     requirejs([
       'app',
       'db',
-      'provider/provider_factory',
       'router',
       'test/support/fake_page',
-      'test/support/factories/all',
-      'test/support/mock_provider'
+      'test/support/factories/all'
     ], () => accept());
   });
 }
@@ -99,33 +97,6 @@ window.testAgentRuntime.testLoader = function(path) {
       requirejs([path], () => accept());
     });
   });
-};
-
-window.mochaPromise = function(mochaFn, description, callback) {
-  if (typeof description === 'function') {
-    callback = description;
-    description = null;
-  }
-
-  function execute(done) {
-    var promise;
-    try {
-      promise = callback.call();
-    } catch (error) {
-     return done(error);
-    }
-
-    return promise.then(() => {
-      done();
-    })
-    .catch(done);
-  }
-
-  if (description) {
-    mochaFn(description, execute);
-  } else {
-    mochaFn(execute);
-  }
 };
 
 window.testSupport = window.testSupport || {};
@@ -271,11 +242,9 @@ window.testSupport.calendar = {
 
   app: function() {
     var Db = requirejs('db');
-    var MockProvider = requirejs('test/support/mock_provider');
     var Router = requirejs('router');
     var app = requirejs('app');
     var fakePage = requirejs('test/support/fake_page');
-    var providerFactory = requirejs('provider/provider_factory');
 
     if (app._pendingManger) {
       // hack to ensure clean tests
@@ -290,8 +259,6 @@ window.testSupport.calendar = {
 
     var db = new Db('b2g-test-calendar');
     app.configure(db, new Router(fakePage));
-    providerFactory.app = app;
-    providerFactory.providers.Mock = new MockProvider({ app: app });
     app.dateFormat = navigator.mozL10n.DateTimeFormat();
     return app;
   },

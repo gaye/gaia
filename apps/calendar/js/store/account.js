@@ -8,7 +8,7 @@ var denodeifyAll = require('promise').denodeifyAll;
 var extend = require('extend');
 var nextTick = require('next_tick');
 var probablyParseInt = require('probably_parse_int');
-var providerFactory = require('provider/provider_factory');
+var provider = require('provider/provider');
 
 function Account() {
   Abstract.apply(this, arguments);
@@ -67,10 +67,6 @@ Account.prototype = {
 
   verifyAndPersist: function(model, callback) {
     var self = this;
-    var provider = providerFactory.get(
-      model.providerType
-    );
-
     provider.getAccount(model.toJSON(), function(err, data) {
       if (err) {
         callback(err);
@@ -134,7 +130,6 @@ Account.prototype = {
     //is purged.
 
     var self = this;
-    var provider = providerFactory.get(account.providerType);
     var calendarStore = this.db.getStore('Calendar');
 
     var persist = [];
@@ -318,6 +313,7 @@ Account.prototype = {
    * @param {Function} callback [Error err, Array accountList].
    */
   syncableAccounts: function(callback) {
+    // TODO(gareth): Need a new scheme here...
     debug('Will find syncable accounts...');
     this.all((err, list) => {
       if (err) {
@@ -327,10 +323,7 @@ Account.prototype = {
       var results = [];
       for (var key in list) {
         var account = list[key];
-        var provider = providerFactory.get(account.providerType);
-        if (provider.canSync) {
-          results.push(account);
-        }
+        results.push(account);
       }
 
       callback(null, results);

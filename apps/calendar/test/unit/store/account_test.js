@@ -7,7 +7,6 @@ var CalendarError = require('error');
 var CalendarModel = require('models/calendar');
 var CalendarStore = require('store/calendar');
 var Factory = require('test/support/factory');
-var providerFactory = require('provider/provider_factory');
 
 suite('store/account', function() {
   var subject;
@@ -203,19 +202,6 @@ suite('store/account', function() {
       });
 
       model = new AccountModel(modelParams);
-
-      providerFactory.providers.Caldav = {
-        getAccount: function(details, callback) {
-          calledWith = details;
-          setTimeout(function() {
-            callback(error, result);
-          }, 0);
-        }
-      };
-    });
-
-    teardown(function() {
-      delete providerFactory.providers.Caldav;
     });
 
     suite('duplicate account failure', function() {
@@ -557,12 +543,6 @@ suite('store/account', function() {
         // this color will be ignored
         color: '#0FC'
       };
-
-      providerFactory.get('Mock').stageFindCalendars(
-        account.user,
-        null,
-        remote
-      );
 
       subject.sync(account, function(err) {
         if (err) {

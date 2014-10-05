@@ -6,7 +6,7 @@ var CalendarModel = require('models/calendar');
 var Local = require('provider/local');
 var denodeifyAll = require('promise').denodeifyAll;
 var probablyParseInt = require('probably_parse_int');
-var providerFactory = require('provider/provider_factory');
+var provider = require('provider/provider');
 
 function Store() {
   Abstract.apply(this, arguments);
@@ -255,7 +255,6 @@ Store.prototype = {
    *       inside of providers.
    */
   sync: function(account, calendar, callback) {
-    var provider = providerFactory.get(account.providerType);
     provider.syncEvents(account, calendar, callback);
   },
 
@@ -271,7 +270,7 @@ Store.prototype = {
         return callback(err);
       }
 
-      callback(null, providerFactory.get(owners.account.providerType));
+      callback(null, provider);
     });
   },
 
