@@ -1,9 +1,20 @@
 define(function(require) {
 'use strict';
+/* global MockIntlHelper */
+
+require('/shared/test/unit/mocks/mock_intl_helper.js');
 
 var MonthDayAgenda = require('templates/month_day_agenda');
 
 suite('templates/month_day_agenda', function() {
+  setup(function() {
+    window.IntlHelper = MockIntlHelper;
+    window.IntlHelper.define('shortTimeFormat', 'datetime', {
+      hour: 'numeric',
+      minute: 'numeric'
+    });
+  });
+
   function renderHTML(type, options) {
     return MonthDayAgenda[type].render(options);
   }

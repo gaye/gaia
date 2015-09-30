@@ -1,5 +1,6 @@
 define(function(require, exports) {
 'use strict';
+/* global IntlHelper */
 
 var Db = require('db');
 var ErrorController = require('controllers/error');
@@ -129,7 +130,32 @@ function setupControllers() {
   alarms.autoQueue = true;
 }
 
+function setupIntlHelpers() {
+  IntlHelper.define('months-day-view-header-format', 'datetime', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric'
+  });
+  IntlHelper.define('multi-month-view-header-format', 'datetime', {
+    month: 'short',
+    year: 'numeric'
+  });
+
+  IntlHelper.define('day-view-header-format', 'datetime', {
+    month: 'short',
+    day: 'numeric',
+    weekday: 'long'
+  });
+
+  IntlHelper.define('shortTimeFormat', 'datetime', {
+    hour: 'numeric',
+    minute: 'numeric'
+  });
+}
+
 function setupUI() {
+  setupIntlHelpers();
+
   return co(function *() {
     // re-localize dates on screen
     dateL10n.init();

@@ -1,3 +1,5 @@
+/* global IntlHelper */
+
 define(function(require, exports, module) {
 'use strict';
 
@@ -13,6 +15,10 @@ var core = require('core');
 var createDay = require('common/calc').createDay;
 var template = require('templates/multi_day');
 var throttle = require('utils/mout').throttle;
+
+IntlHelper.define('hour-format', 'datetime', {
+  hour: 'numeric'
+});
 
 function MultiDay(opts) {
   this.children = [];

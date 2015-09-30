@@ -1,5 +1,8 @@
 define(function(require) {
 'use strict';
+/* global MockIntlHelper */
+
+require('/shared/test/unit/mocks/mock_intl_helper.js');
 
 var AccountTemplate = require('templates/account');
 var CreateAccount = require('views/create_account');
@@ -10,6 +13,7 @@ suite('Views.CreateAccount', function() {
   var subject;
   var template;
   var storeFactory;
+  var realIntlHelper;
 
   teardown(function() {
     var el = document.getElementById('test');
@@ -17,6 +21,8 @@ suite('Views.CreateAccount', function() {
   });
 
   setup(function(done) {
+    realIntlHelper = window.IntlHelper;
+    window.IntlHelper = MockIntlHelper;
     var div = document.createElement('div');
     div.id = 'test';
     div.innerHTML = [
@@ -37,6 +43,7 @@ suite('Views.CreateAccount', function() {
   });
 
   teardown(function(done) {
+    window.IntlHelper = realIntlHelper;
     subject.destroy();
     testSupport.calendar.clearStore(
       core.db,

@@ -1,17 +1,18 @@
+/* global IntlHelper */
+
 define(function(require, exports, module) {
 'use strict';
 
 var Calc = require('common/calc');
 var create = require('template').create;
-var dateFormat = require('date_format');
-
-var l10n = navigator.mozL10n;
 
 module.exports = create({
   time: function() {
     var time = this.arg('time');
-    var format = Calc.getTimeL10nLabel(this.h('format'));
-    var displayTime = dateFormat.localeFormat(time, l10n.get(format));
+    var format = this.h('format');
+
+    var formatter = IntlHelper.get(format);
+    var displayTime = formatter.format(time);
 
     return `<span data-l10n-date-format="${format}"
                   data-date="${time}">${displayTime}</span>`;
@@ -19,23 +20,23 @@ module.exports = create({
 
   hour: function() {
     var hour = this.h('hour');
-    var format = Calc.getTimeL10nLabel(this.h('format'));
+    var format = this.h('format');
     var className = this.h('className');
     // 0ms since epoch as base date to avoid issues with daylight saving time
     var date = new Date(0);
     date.setHours(hour, 0, 0, 0);
 
-    var l10nLabel = l10n.get(format);
+    var displayHour;
+    var formatter = IntlHelper.get(format);
+
     if (this.arg('addAmPmClass')) {
-      l10nLabel = l10nLabel.replace(
-        /\s*%p\s*/,
-        '<span class="ampm" aria-hidden="true">%p</span>'
-      );
+      displayHour = formatter.format(date, {
+        dayperiod: '<span class="ampm" aria-hidden="true">$&</span>',
+      });
+    } else {
+      displayHour = formatter.format(date);
     }
 
-    var displayHour = dateFormat.localeFormat(date, l10nLabel);
-    // remove leading zero
-    displayHour = displayHour.replace(/^0/, '');
     var l10nAttr = (hour === Calc.ALLDAY) ?
       'data-l10n-id="hour-allday"' :
       `data-l10n-date-format="${format}"`;

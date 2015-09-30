@@ -1,10 +1,11 @@
 define(function(require) {
 'use strict';
+/* global MockIntlHelper */
 
 var MonthDayAgenda = require('views/month_day_agenda');
 var core = require('core');
-var dateFormat = require('date_format');
 var template = require('templates/month_day_agenda');
+require('/shared/test/unit/mocks/mock_intl_helper.js');
 
 suite('Views.MonthDayAgenda', function() {
   var subject;
@@ -16,6 +17,16 @@ suite('Views.MonthDayAgenda', function() {
   });
 
   setup(function(done) {
+    window.IntlHelper = MockIntlHelper;
+    window.IntlHelper.define('months-day-view-header-format', 'datetime', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric'
+    });
+    window.IntlHelper.define('shortTimeFormat', 'datetime', {
+      hour: 'numeric',
+      minute: 'numeric'
+    });
     var div = document.createElement('div');
     div.id = 'test';
     div.innerHTML = [
@@ -49,10 +60,10 @@ suite('Views.MonthDayAgenda', function() {
       var format = 'months-day-view-header-format';
       subject.changeDate(now);
 
-      assert.deepEqual(currentDate.textContent, dateFormat.localeFormat(
-        now,
-        navigator.mozL10n.get(format)
-      ), 'should set the currentDate textContent');
+      assert.equal(
+        currentDate.getAttribute('data-l10n-date-format'),
+        format,
+        'should set the currentDate textContent');
 
       assert.deepEqual(new Date(currentDate.dataset.date), new Date(now));
       assert.deepEqual(currentDate.dataset.l10nDateFormat, format);
@@ -73,10 +84,10 @@ suite('Views.MonthDayAgenda', function() {
 
       assert.notDeepEqual(subject.date, oldDate, 'date changed');
 
-      assert.deepEqual(currentDate.textContent, dateFormat.localeFormat(
-        subject.date,
-        navigator.mozL10n.get(format)
-      ), 'should set the currentDate textContent');
+      assert.equal(
+        currentDate.getAttribute('data-l10n-date-format'),
+        format,
+        'should set the currentDate textContent');
 
       assert.deepEqual(
         new Date(currentDate.dataset.date),

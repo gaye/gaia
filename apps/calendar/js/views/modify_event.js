@@ -1,3 +1,5 @@
+/* global IntlHelper */
+
 define(function(require, exports, module) {
 'use strict';
 
@@ -7,14 +9,23 @@ var InputParser = require('shared/input_parser');
 var QueryString = require('querystring');
 var co = require('ext/co');
 var core = require('core');
-var dateFormat = require('date_format');
-var getTimeL10nLabel = require('common/calc').getTimeL10nLabel;
 var localCalendarId = require('common/constants').localCalendarId;
 var notification = require('notification');
 var router = require('router');
 var viewFactory = require('./factory');
 
 require('dom!modify-event-view');
+
+IntlHelper.define('formalDate', 'datetime', {
+  month: '2-digit',
+  year: '2-digit',
+  day: '2-digit'
+});
+
+IntlHelper.define('shortTime', 'datetime', {
+  hour: 'numeric',
+  minute: 'numeric'
+});
 
 function ModifyEvent(options) {
   this.deleteRecord = this.deleteRecord.bind(this);
@@ -31,8 +42,8 @@ ModifyEvent.prototype = {
   MAX_ALARMS: 5,
 
   formats: {
-    date: 'dateTimeFormat_%x',
-    time: 'shortTimeFormat'
+    date: 'formalDate',
+    time: 'shortTime',
   },
 
   selectors: {
@@ -614,15 +625,11 @@ ModifyEvent.prototype = {
   _renderDateTimeLocale: function(targetElement, value) {
     // we inject the targetElement to make it easier to test
     var type = targetElement.dataset.type;
-    var localeFormat = dateFormat.localeFormat;
-    var formatKey = this.formats[type];
-    if (type === 'time') {
-      formatKey = getTimeL10nLabel(formatKey);
-    }
-    var format = navigator.mozL10n.get(formatKey);
-    targetElement.textContent = localeFormat(value, format);
+    var formatName = this.formats[type];
+    var formatter = IntlHelper.get(formatName);
+    targetElement.textContent = formatter.format(value);
     // we need to store the format and date for l10n
-    targetElement.setAttribute('data-l10n-date-format', formatKey);
+    targetElement.setAttribute('data-l10n-date-format', formatName);
     targetElement.dataset.date = value;
   },
 

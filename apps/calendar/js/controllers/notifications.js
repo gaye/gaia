@@ -1,10 +1,10 @@
 define(function(require, exports) {
 'use strict';
+/* global mozIntl */
 
 var calc = require('common/calc');
 var co = require('ext/co');
 var core = require('core');
-var dateFormat = require('date_format');
 var debug = require('common/debug')('controllers/notifications');
 var messageHandler = require('message_handler');
 var notification = require('notification');
@@ -73,27 +73,29 @@ var issueNotification = co.wrap(function *(alarm) {
   }
 
   var begins = calc.dateFromTransport(busytime.start);
-  var distance = dateFormat.fromNow(begins);
-  var now = new Date();
+  var formatter = mozIntl._gaia.RelativeDate(navigator.languages);
+  return formatter.format(begins).then(distance => {
+    var now = new Date();
 
-  var alarmType = begins > now ?
-    'alarm-start-notice' :
-    'alarm-started-notice';
+    var alarmType = begins > now ?
+      'alarm-start-notice' :
+      'alarm-started-notice';
 
-  var l10n = navigator.mozL10n;
-  var title = l10n.get(alarmType, {
-    title: event.remote.title,
-    distance: distance
+    var l10n = navigator.mozL10n;
+    var title = l10n.get(alarmType, {
+      title: event.remote.title,
+      distance: distance
+    });
+
+    var body = event.remote.description || '';
+    debug('Will send event notification with title', title, 'body:', body);
+    return notification.sendNotification(
+      title,
+      body,
+      `/alarm-display/${busytime._id}`,
+      { id: event.remote.id }
+    );
   });
-
-  var body = event.remote.description || '';
-  debug('Will send event notification with title', title, 'body:', body);
-  return notification.sendNotification(
-    title,
-    body,
-    `/alarm-display/${busytime._id}`,
-    { id: event.remote.id }
-  );
 });
 
 });
