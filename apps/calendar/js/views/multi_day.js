@@ -1,11 +1,10 @@
-/* global IntlHelper */
-
 define(function(require, exports, module) {
 'use strict';
 
 var Calc = require('common/calc');
 var CurrentTime = require('./current_time');
 var HourDoubleTap = require('./hour_double_tap');
+var IntlHelper = require('shared/intl_helper');
 var Pan = require('./pan');
 var SingleDay = require('./single_day');
 var Timespan = require('common/timespan');

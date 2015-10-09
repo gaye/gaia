@@ -1,8 +1,7 @@
-/* global IntlHelper */
-
 define(function(require, exports, module) {
 'use strict';
 
+var IntlHelper = require('shared/intl_helper');
 var Parent = require('view');
 var core = require('core');
 var createDay = require('common/calc').createDay;

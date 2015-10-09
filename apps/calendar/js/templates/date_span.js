@@ -1,9 +1,8 @@
-/* global IntlHelper */
-
 define(function(require, exports, module) {
 'use strict';
 
 var Calc = require('common/calc');
+var IntlHelper = require('shared/intl_helper');
 var create = require('template').create;
 
 module.exports = create({

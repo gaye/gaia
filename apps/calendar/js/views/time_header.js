@@ -1,8 +1,7 @@
-/* global IntlHelper */
-
 define(function(require, exports, module) {
 'use strict';
 
+var IntlHelper = require('shared/intl_helper');
 var View = require('view');
 var core = require('core');
 var router = require('router');
@@ -123,7 +122,6 @@ TimeHeader.prototype = {
 
   _localeFormat: function(date, scale) {
     var formatter = IntlHelper.get(this.scales[scale]);
-
     return formatter.format(date);
   },
 

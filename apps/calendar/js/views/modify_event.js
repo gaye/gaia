@@ -1,11 +1,10 @@
-/* global IntlHelper */
-
 define(function(require, exports, module) {
 'use strict';
 
 var AlarmTemplate = require('templates/alarm');
 var EventBase = require('./event_base');
 var InputParser = require('shared/input_parser');
+var IntlHelper = require('shared/intl_helper');
 var QueryString = require('querystring');
 var co = require('ext/co');
 var core = require('core');

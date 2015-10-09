@@ -1,6 +1,6 @@
+/* global mozIntl */
 define(function(require, exports) {
 'use strict';
-/* global mozIntl */
 
 var calc = require('common/calc');
 var co = require('ext/co');
@@ -74,28 +74,27 @@ var issueNotification = co.wrap(function *(alarm) {
 
   var begins = calc.dateFromTransport(busytime.start);
   var formatter = mozIntl._gaia.RelativeDate(navigator.languages);
-  return formatter.format(begins).then(distance => {
-    var now = new Date();
+  var distance = yield formatter.format(begins);
+  var now = new Date();
 
-    var alarmType = begins > now ?
-      'alarm-start-notice' :
-      'alarm-started-notice';
+  var alarmType = begins > now ?
+    'alarm-start-notice' :
+    'alarm-started-notice';
 
-    var l10n = navigator.mozL10n;
-    var title = l10n.get(alarmType, {
-      title: event.remote.title,
-      distance: distance
-    });
-
-    var body = event.remote.description || '';
-    debug('Will send event notification with title', title, 'body:', body);
-    return notification.sendNotification(
-      title,
-      body,
-      `/alarm-display/${busytime._id}`,
-      { id: event.remote.id }
-    );
+  var l10n = navigator.mozL10n;
+  var title = l10n.get(alarmType, {
+    title: event.remote.title,
+    distance: distance
   });
+
+  var body = event.remote.description || '';
+  debug('Will send event notification with title', title, 'body:', body);
+  return notification.sendNotification(
+    title,
+    body,
+    `/alarm-display/${busytime._id}`,
+    { id: event.remote.id }
+  );
 });
 
 });

@@ -1,7 +1,7 @@
-/* global IntlHelper */
-
 define(function(require, exports) {
 'use strict';
+
+var IntlHelper = require('shared/intl_helper');
 
 /**
  * Observes localized events and localizes elements

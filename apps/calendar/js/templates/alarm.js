@@ -1,6 +1,6 @@
+/* global mozIntl */
 define(function(require, exports, module) {
 'use strict';
-/* global mozIntl */
 
 var create = require('template').create;
 

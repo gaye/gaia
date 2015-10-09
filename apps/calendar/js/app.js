@@ -1,6 +1,5 @@
 define(function(require, exports) {
 'use strict';
-/* global IntlHelper */
 
 var Db = require('db');
 var ErrorController = require('controllers/error');
@@ -16,6 +15,7 @@ var core = require('core');
 var dateL10n = require('date_l10n');
 var dayObserver = require('day_observer');
 var debug = require('common/debug')('app');
+var intl = require('./intl');
 var messageHandler = require('message_handler');
 var nextTick = require('common/next_tick');
 var notificationsController = require('controllers/notifications');
@@ -130,31 +130,8 @@ function setupControllers() {
   alarms.autoQueue = true;
 }
 
-function setupIntlHelpers() {
-  IntlHelper.define('months-day-view-header-format', 'datetime', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric'
-  });
-  IntlHelper.define('multi-month-view-header-format', 'datetime', {
-    month: 'short',
-    year: 'numeric'
-  });
-
-  IntlHelper.define('day-view-header-format', 'datetime', {
-    month: 'short',
-    day: 'numeric',
-    weekday: 'long'
-  });
-
-  IntlHelper.define('shortTimeFormat', 'datetime', {
-    hour: 'numeric',
-    minute: 'numeric'
-  });
-}
-
 function setupUI() {
-  setupIntlHelpers();
+  intl.init();
 
   return co(function *() {
     // re-localize dates on screen

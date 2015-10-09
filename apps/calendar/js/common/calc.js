@@ -1,8 +1,9 @@
+/* global mozIntl */
 define(function(require, exports) {
 'use strict';
-/* global mozIntl */
 
 var Timespan = require('./timespan');
+var co = require('ext/co');
 
 const SECOND = 1000;
 const MINUTE = (SECOND * 60);
@@ -569,11 +570,9 @@ exports.isAllDay = function(baseDate, startDate, endDate) {
 };
 
 if (typeof(window) !== 'undefined') {
-  window.addEventListener('localized', () => {
-    mozIntl.calendarInfo('firstDayOfTheWeek').then(startDay => {
-      exports.startDay = startDay;
-    });
-  });
+  window.addEventListener('localized', co.wrap(function *() {
+    exports.startDay = yield mozIntl.calendarInfo('firstDayOfTheWeek');
+  }));
 }
 
 });
